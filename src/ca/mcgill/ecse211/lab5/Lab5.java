@@ -20,9 +20,9 @@ public class Lab5 {
 
 	// Instantiate relevant variables 
 	public static final TextLCD lcd = LocalEV3.get().getTextLCD();
-	public static final double WHEEL_RAD = 2.14;
+	public static final double WHEEL_RAD = 2.20;
 	public static final double SQUARE_SIZE = 30.48;
-	public static final double TRACK = 14.30;
+	public static final double TRACK = 14.0;
 	public static boolean isUSLocalizing = false;
 	public static boolean isLightLocalizing = false;
 	public static boolean isLightLocalizingTurn = false;
@@ -40,8 +40,8 @@ public class Lab5 {
 
 	//Motors and sensor initialization
 	static final Port usPort = LocalEV3.get().getPort("S1");
-	static final Port portColor = LocalEV3.get().getPort("S2");
-	static final Port portGyro = LocalEV3.get().getPort("S3");
+	static final Port portColorLeft = LocalEV3.get().getPort("S2");
+	static final Port portColorRight = LocalEV3.get().getPort("S3");
 	static final Port portRing = LocalEV3.get().getPort("S4");
 
 
@@ -92,31 +92,24 @@ public class Lab5 {
 		UltrasonicPoller usPoller = new UltrasonicPoller(usDistance, usData, usLocalizer); // Instantiate poller
 		usPoller.start();
 		
-//		// Based on edge selection, call the corresponding edge method on the Ultrasonic Localizer object
-//		isUSLocalizing = true;
-//		usLocalizer.fallingEdge();
-//		isUSLocalizing = false;
-//		((EV3GyroSensor) Odometer.myGyro).reset();
-		
-		
+		// Based on edge selection, call the corresponding edge method on the Ultrasonic Localizer object
+		isUSLocalizing = true;
+		usLocalizer.fallingEdge();
+		isUSLocalizing = false;
 
-
-//		// Upon any input, instantiate light localizer
-//		isLightLocalizing = true;
+		// Upon any input, instantiate light localizer
+		isLightLocalizing = true;
 		LightLocalizer lightLocalizer  = new LightLocalizer(odometer, nav);    
-//		lightLocalizer.start();
-//		try {
-//			lightLocalizer.join();
-//		} catch (InterruptedException e) {
-//
-//		}
-		isLightLocalizing = false;
-		isLightLocalizingTurn = false;
+		lightLocalizer.start();
+		try {
+			lightLocalizer.join();
+		} catch (InterruptedException e) {
+
+		}
 		
 		odometer.setXYT(SQUARE_SIZE,SQUARE_SIZE , 0);
-		((EV3GyroSensor) Odometer.myGyro).reset();
 
-		isGoingToLL = true;
+	//	isGoingToLL = true;
 		Navigation.travelTo(1, LLy);
 		Navigation.travelTo(LLx, LLy);
 		

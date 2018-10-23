@@ -68,19 +68,11 @@ public class UltrasonicLocalizer implements UltrasonicController {
 			Lab5.lcd.drawString("Final: " + FINAL_ANGLE, 0, 4);
 		} else if(Lab5.isLightLocalizing) {
 			Lab5.lcd.clear();
-			Lab5.lcd.drawString("passedLines: " + LightLocalizer.passedLine, 0, 1);
-			Lab5.lcd.drawString("color: "+ LightLocalizer.newColor, 0, 2);
-			Lab5.lcd.drawString("x: "+ LightLocalizer.result[0], 0, 3);
-			Lab5.lcd.drawString("y: "+ LightLocalizer.result[1], 0, 4);
-			Lab5.lcd.drawString("theta: "+ LightLocalizer.result[2], 0, 5);
-		}
-		else if(Lab5.isLightLocalizingTurn) {
-			Lab5.lcd.clear();
-			Lab5.lcd.drawString("passedLines: " + LightLocalizer.passedLine, 0, 1);
-			Lab5.lcd.drawString("points size: " + LightLocalizer.points.size(), 0, 2);
-			Lab5.lcd.drawString("x: " + odo.getXYT()[0], 0, 3);
-			Lab5.lcd.drawString("y: " + odo.getXYT()[1], 0, 4);
-			Lab5.lcd.drawString("theta: " + odo.getXYT()[2], 0, 5);
+			Lab5.lcd.drawString("colorLeft: "+ LightLocalizer.newColorLeft, 0, 2);
+			Lab5.lcd.drawString("colorRight: "+ LightLocalizer.newColorRight, 0, 3);
+			Lab5.lcd.drawString("x: "+ odo.getXYT()[0], 0, 4);
+			Lab5.lcd.drawString("y: "+odo.getXYT()[1], 0, 5);
+			Lab5.lcd.drawString("theta: "+ odo.getXYT()[2], 0, 6);
 		}
 		else if(Lab5.isGoingToLL) {
 			Lab5.lcd.clear();

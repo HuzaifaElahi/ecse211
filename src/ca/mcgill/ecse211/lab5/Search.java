@@ -94,8 +94,8 @@ public class Search extends Thread{
 				Thread.sleep(200);
 			} catch (Exception e) {
 			} // Poor man's timed sampling
-			RingDetection.myColorSample.fetchSample(rgb, 0);
-			colorCode = RingDetection.detectColor(rgb); //gets sensor data and passes to colordetector class
+//			RingDetection.myColorSample.fetchSample(rgb, 0);
+//			colorCode = RingDetection.detectColor(rgb); //gets sensor data and passes to colordetector class
 			samples.add(colorCode);
 		}
 		Navigation.turnRobot(leftMotor, rightMotor, 20, 50, false, true);

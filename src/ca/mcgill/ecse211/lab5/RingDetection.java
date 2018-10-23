@@ -5,7 +5,7 @@ import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
 
 public class RingDetection {
-	public static SensorModes myColor = new EV3ColorSensor(Lab5.portColor);
+/*	public static SensorModes myColor = new EV3ColorSensor(Lab5.portColor);
 	public static SampleProvider myColorSample = myColor.getMode("RGB");
 	static float[] sampleColor = new float[myColor.sampleSize()];
 
@@ -63,5 +63,5 @@ public class RingDetection {
 			return 2;
 
 		return 0;
-	}
+	} */
 }

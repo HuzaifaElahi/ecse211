@@ -28,11 +28,7 @@ public class Odometer extends OdometerData implements Runnable {
 	private int rightMotorTachoCount;
 	private EV3LargeRegulatedMotor leftMotor;
 	private EV3LargeRegulatedMotor rightMotor;
-	public static SensorModes myGyro = new EV3GyroSensor(Lab5.portGyro);
-	public static SampleProvider gyroSample = myGyro.getMode("Angle");
-	float[] theta = new float[myGyro.sampleSize()];
-	float newTheta=0;
-	float oldTheta=0;
+
 
 	private final double TRACK;
 	private final double WHEEL_RAD;
@@ -111,10 +107,6 @@ public class Odometer extends OdometerData implements Runnable {
 
 		while (true) {
 			updateStart = System.currentTimeMillis();
-			
-			// use gyro
-			gyroSample.fetchSample(theta, 0);
-			newTheta = theta[0];
 
 			// Calculate new robot position based on tachometer counts
 			double distL, distR, deltaD, deltaT, dX, dY;
@@ -129,8 +121,7 @@ public class Odometer extends OdometerData implements Runnable {
 			leftMotorTachoCount = nowTachoL;
 			rightMotorTachoCount = nowTachoR;
 			deltaD = 0.5 * (distL + distR);
-		//	deltaT = (distL - distR) / TRACK; 
-			deltaT = newTheta-oldTheta;
+			deltaT = (distL - distR) / TRACK; 
 			
 			double Theta = Math.toRadians(position[2]);
 			Theta += deltaT;
@@ -139,9 +130,7 @@ public class Odometer extends OdometerData implements Runnable {
 
 
 			// Update odometer values with new calculated values
-//			odo.update(dX, dY, Math.toDegrees(deltaT));
-			odo.update(dX, dY, deltaT);
-			oldTheta = newTheta;
+			odo.update(dX, dY, Math.toDegrees(deltaT));
 
 			// this ensures that the odometer only runs once every period
 			updateEnd = System.currentTimeMillis();
