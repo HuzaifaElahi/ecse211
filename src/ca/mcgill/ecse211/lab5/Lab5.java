@@ -92,12 +92,12 @@ public class Lab5 {
 		UltrasonicPoller usPoller = new UltrasonicPoller(usDistance, usData, usLocalizer); // Instantiate poller
 		usPoller.start();
 		
-		// Based on edge selection, call the corresponding edge method on the Ultrasonic Localizer object
+		// Ultrasonic localize
 		isUSLocalizing = true;
 		usLocalizer.fallingEdge();
 		isUSLocalizing = false;
 
-		// Upon any input, instantiate light localizer
+		// Light localize
 		isLightLocalizing = true;
 		LightLocalizer lightLocalizer  = new LightLocalizer(odometer, nav);    
 		lightLocalizer.start();

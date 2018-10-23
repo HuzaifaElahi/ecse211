@@ -108,21 +108,27 @@ public class Navigation {
 			LightLocalizer.newColorLeft = LightLocalizer.colorLeft[0];
 			LightLocalizer.newColorRight = LightLocalizer.colorRight[0];
 
-			//If line detected (intensity less than 0.3), only count once by keeping track of last value
+			// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
 			if((LightLocalizer.newColorLeft) < 0.4 && LightLocalizer.oldSampleLeft > 0.4 && foundLeft == 0) {
 				leftMotor.stop(true);
 				foundLeft++;
 			}
+			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
 			if((LightLocalizer.newColorRight) < 0.4 && LightLocalizer.oldSampleRight > 0.4 && foundRight == 0) {
 				rightMotor.stop(true);
 				foundRight++;
 			}
+			// Store last color samples
 			LightLocalizer.oldSampleLeft = LightLocalizer.newColorLeft;
 			LightLocalizer.oldSampleRight = LightLocalizer.newColorRight;
+			
+			// If line found for both sensors, exit
 			if(foundLeft == 1 && foundRight == 1) {
 				break;
 			}
 		}
+		
+		// Move forward beyond line by length of offset so turning point is directly above line
 		leftMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, LightLocalizer.SENSOR_OFFSET), true);
 		rightMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, LightLocalizer.SENSOR_OFFSET), false);
 
