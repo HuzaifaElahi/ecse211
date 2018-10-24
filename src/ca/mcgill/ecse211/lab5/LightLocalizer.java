@@ -30,7 +30,7 @@ public class LightLocalizer extends Thread implements Runnable {
 	private Odometer odo;
 	private Navigation nav;
 	public static double []result = new double[3];
-	public static final double SENSOR_OFFSET = 5;
+	public static final double SENSOR_OFFSET = 6.4;
 	static ArrayList<Double> points = new ArrayList<Double>();
 	double[] oldResult = new double [3];
 	static int passedLine;

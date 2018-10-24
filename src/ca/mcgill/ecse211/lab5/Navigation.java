@@ -18,8 +18,9 @@ public class Navigation {
 
 
 	// Parameters: Can adjust these for desired performance
-	private static final int MOTOR_HIGH = 80;     // Speed of the faster rotating wheel (deg/seec)
-	private static final int ROTATE_SPEED = 50;   // Speed upon rotation
+	private static final int MOTOR_HIGH = 120;     // Speed of the faster rotating wheel (deg/seec)
+	public static final int FORWARD_SPEED = 120;
+	private static final int ROTATE_SPEED = 90;   // Speed upon rotation
 	private final static double ODOMETER_ADJUSTMENT = 0.5;    // Adjusts the inaccuracy of the odometer
 	//Motors initialized
 	public static EV3LargeRegulatedMotor leftMotor;
@@ -51,9 +52,10 @@ public class Navigation {
 	 * @param y
 	 * @return void
 	 */ 
-	public static void travelTo(double x, double y) {
+	public static void travelToWithCorrection(double x, double y, boolean isFirst, boolean moveBack) {
 		// Define variables
 		double odometer[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
+		
 
 		// Set navigating to true
 		navigating = true;
@@ -82,12 +84,17 @@ public class Navigation {
 		// Get absolute angle the robot must be facing
 		absAngle = Math.toDegrees(Math.atan2(deltaX, deltaY));
 
-		// If the value of absolute angle is negative, loop it back
-		if (absAngle < 0)
-			absAngle = 360 - Math.abs(absAngle);
+//		// If the value of absolute angle is negative, loop it back
+//		if (absAngle < 0)
+//			absAngle = 360 - Math.abs(absAngle);
 
 		// Make robot turn to the absolute angle
-		turnTo(absAngle);
+//		turnTo(absAngle);
+		turnTofouad(absAngle);
+		
+		if (moveBack) {
+			moveStraight(Lab5.leftMotor, Lab5.rightMotor, 20, 120, true, false);
+		}
 
 		leftMotor.setAcceleration(1000);
 		rightMotor.setAcceleration(1000);
@@ -97,43 +104,147 @@ public class Navigation {
 		
 		LightLocalizer.oldSampleLeft = 0;
 		LightLocalizer.oldSampleRight = 0;
-		leftMotor.forward();
-		rightMotor.forward();
 		
-		int foundLeft = 0; int foundRight = 0;
-		while(true) {
-			//color sensor and scaling
-			LightLocalizer.myColorSampleLeft.fetchSample(LightLocalizer.colorLeft, 0);
-			LightLocalizer.myColorSampleRight.fetchSample(LightLocalizer.colorRight, 0);
-			LightLocalizer.newColorLeft = LightLocalizer.colorLeft[0];
-			LightLocalizer.newColorRight = LightLocalizer.colorRight[0];
-
-			// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
-			if((LightLocalizer.newColorLeft) < 0.4 && LightLocalizer.oldSampleLeft > 0.4 && foundLeft == 0) {
-				leftMotor.stop(true);
-				foundLeft++;
-			}
-			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
-			if((LightLocalizer.newColorRight) < 0.4 && LightLocalizer.oldSampleRight > 0.4 && foundRight == 0) {
-				rightMotor.stop(true);
-				foundRight++;
-			}
-			// Store last color samples
-			LightLocalizer.oldSampleLeft = LightLocalizer.newColorLeft;
-			LightLocalizer.oldSampleRight = LightLocalizer.newColorRight;
+		
+		//if true then not first trial
+		if (!isFirst) {
 			
-			// If line found for both sensors, exit
-			if(foundLeft == 1 && foundRight == 1) {
-				break;
+			leftMotor.forward();
+			rightMotor.forward();
+			
+			int foundLeft = 0; int foundRight = 0;
+			while(true) {
+				//color sensor and scaling
+				LightLocalizer.myColorSampleLeft.fetchSample(LightLocalizer.colorLeft, 0);
+				LightLocalizer.myColorSampleRight.fetchSample(LightLocalizer.colorRight, 0);
+				LightLocalizer.newColorLeft = LightLocalizer.colorLeft[0];
+				LightLocalizer.newColorRight = LightLocalizer.colorRight[0];
+
+				// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
+				if((LightLocalizer.newColorLeft) < 0.4 && LightLocalizer.oldSampleLeft > 0.4 && foundLeft == 0) {
+					leftMotor.stop(true);
+					foundLeft++;
+				}
+				// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
+				if((LightLocalizer.newColorRight) < 0.4 && LightLocalizer.oldSampleRight > 0.4 && foundRight == 0) {
+					rightMotor.stop(true);
+					foundRight++;
+				}
+				// Store last color samples
+				LightLocalizer.oldSampleLeft = LightLocalizer.newColorLeft;
+				LightLocalizer.oldSampleRight = LightLocalizer.newColorRight;
+				
+				// If line found for both sensors, exit
+				if(foundLeft == 1 && foundRight == 1) {
+					break;
+				}
 			}
+			
+			if (moveBack) {
+				// Move forward beyond line by length of offset so turning point is directly above line
+				leftMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, -LightLocalizer.SENSOR_OFFSET), true);
+				rightMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, -LightLocalizer.SENSOR_OFFSET), false);
+			}
+
+			
+		} else {
+			leftMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, dist), true);
+			rightMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, dist), false);
 		}
+
 		
-		// Move forward beyond line by length of offset so turning point is directly above line
-		leftMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, LightLocalizer.SENSOR_OFFSET), true);
-		rightMotor.rotate(Navigation.convertDistance(Lab5.WHEEL_RAD, LightLocalizer.SENSOR_OFFSET), false);
+
 
 	}
 
+
+	
+	
+	/**
+	 * This method makes robot move in the direction of the
+	 * waypoint whose coordinates are passed as arguments
+	 * 
+	 * @param x
+	 * @param y
+	 * @return void
+	 */ 
+	public static void travelToNoCorrection(double x, double y) {
+		// Define variables
+		double odometer[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
+		
+		// Set navigating to true
+		navigating = true;
+
+		// Get odometer readings
+		try {
+			odometer = Odometer.getOdometer().getXYT();
+		} catch (Exception e) {
+			// Do nothing lol
+			e.printStackTrace();
+		}
+
+		// Convert X & Y coordinates to actual length (cm)
+		x = x*Lab5.SQUARE_SIZE;
+		y = y*Lab5.SQUARE_SIZE;
+
+		// Set odometer reading angle as prev angle as well
+		prevAngle = odometer[2];
+
+		// Get displacement to travel on X and Y axis
+		deltaX = x - odometer[0];
+		deltaY = y - odometer[1];
+
+		// Displacement to point (hypothenuse)
+		dist = Math.hypot(Math.abs(deltaX), Math.abs(deltaY));
+
+		// Get absolute angle the robot must be facing
+		absAngle = Math.toDegrees(Math.atan2(deltaX, deltaY));
+
+//		// If the value of absolute angle is negative, loop it back
+//		if (absAngle < 0)
+//			absAngle = 360 - Math.abs(absAngle);
+
+		// Make robot turn to the absolute angle
+		//correctedTurnTo(absAngle);
+		turnTofouad(absAngle);
+
+		// Set robot speed
+		leftMotor.setSpeed(MOTOR_HIGH);
+		rightMotor.setSpeed(MOTOR_HIGH);
+		leftMotor.setAcceleration(1000);
+		rightMotor.setAcceleration(1000);
+
+		// Move distance to the waypoint after robot has adjusted angle
+		leftMotor.rotate(convertDistance(Lab5.WHEEL_RAD, dist), true);
+		rightMotor.rotate(convertDistance(Lab5.WHEEL_RAD, dist), false);
+
+	}
+	
+	static void turnTofouad(double theta) {
+		double odometer[] = { 0, 0, 0 }, absAngle = 0, dist = 0, deltaX = 0, deltaY = 0;
+		try {
+			odometer = Odometer.getOdometer().getXYT();
+		} catch (OdometerExceptions e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		double dTheta = theta - odometer[2];
+		if(dTheta < 0) dTheta += 360;
+		
+
+		if (dTheta > 180) { // turn left
+			leftMotor.setSpeed(ROTATE_SPEED);
+			rightMotor.setSpeed(ROTATE_SPEED);
+			leftMotor.rotate(-convertAngle(Lab5.WHEEL_RAD, Lab5.TRACK,360 - dTheta), true);
+			rightMotor.rotate(convertAngle(Lab5.WHEEL_RAD, Lab5.TRACK, 360 - dTheta), false);
+		}
+		else { // turn right
+			leftMotor.setSpeed(ROTATE_SPEED);
+			rightMotor.setSpeed(ROTATE_SPEED);
+			leftMotor.rotate(convertAngle(Lab5.WHEEL_RAD, Lab5.TRACK, dTheta), true);
+			rightMotor.rotate(-convertAngle(Lab5.WHEEL_RAD, Lab5.TRACK, dTheta), false);
+		}
+	}
 	/**
 	 * This method causes robot to travel a distance based on the
 	 * hypotenus value obtained from performing pythagoras
@@ -172,6 +283,7 @@ public class Navigation {
 
 	}
 
+	
 
 	/**
 	 * method uses gyro to ensure that we turn the specified corrected amount
@@ -326,6 +438,15 @@ public class Navigation {
 		if (!forwards) i = -1;
 		leftMotor.setSpeed(speed);
 		rightMotor.setSpeed(speed);
+		leftMotor.rotate(convertDistance(Lab5.WHEEL_RAD, i * distance), true);
+		rightMotor.rotate(convertDistance(Lab5.WHEEL_RAD, i *distance), continueRunning);
+	}
+	public static void curveThatBitch(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor, 
+			double distance, int leftSpeed, int rightSpeed, boolean forwards, boolean continueRunning ) {
+		int i = 1;
+		if (!forwards) i = -1;
+		leftMotor.setSpeed(leftSpeed);
+		rightMotor.setSpeed(rightSpeed);
 		leftMotor.rotate(convertDistance(Lab5.WHEEL_RAD, i * distance), true);
 		rightMotor.rotate(convertDistance(Lab5.WHEEL_RAD, i *distance), continueRunning);
 	}

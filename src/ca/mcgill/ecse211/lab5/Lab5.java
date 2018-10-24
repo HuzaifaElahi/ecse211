@@ -16,13 +16,19 @@ import lejos.robotics.SampleProvider;
  * @author Huzaifa, Jake
  *
  */
+
+// TODO
+// - make faster start to loading sensors
+//
+
+
 public class Lab5 {
 
 	// Instantiate relevant variables 
 	public static final TextLCD lcd = LocalEV3.get().getTextLCD();
 	public static final double WHEEL_RAD = 2.20;
 	public static final double SQUARE_SIZE = 30.48;
-	public static final double TRACK = 14.0;
+	public static final double TRACK = 10.4;
 	public static boolean isUSLocalizing = false;
 	public static boolean isLightLocalizing = false;
 	public static boolean isLightLocalizingTurn = false;
@@ -32,8 +38,8 @@ public class Lab5 {
 
 	public static final int LLx = 2;
 	public static final int LLy = 2;
-	public static final int URx = 7;
-	public static final int URy = 7;
+	public static final int URx = 5;
+	public static final int URy = 5;
 	public static final int SC = 0;
 	public static final int TR = 1;
 
@@ -53,7 +59,7 @@ public class Lab5 {
 
 	public static void main(String[] args) throws OdometerExceptions {
 		
-		int buttonChoice;
+		int buttonChoice = 0;
 
 		do {
 			lcd.clear();   		// clear the display
@@ -69,6 +75,8 @@ public class Lab5 {
 			// Until button pressed
 		} while (buttonChoice != Button.ID_LEFT && buttonChoice != Button.ID_RIGHT); 
 
+		Button.waitForAnyPress();
+		lcd.clear();
 		
 		// Set odometer and start thread
 		try {
@@ -84,7 +92,7 @@ public class Lab5 {
 			e1.printStackTrace();
 		}
 
-		
+		RingDetection ringDetector = new RingDetection();
 		UltrasonicLocalizer usLocalizer = new UltrasonicLocalizer(LocalizationType.FALLING_EDGE, odometer, nav);
 		SensorModes usSensor = new EV3UltrasonicSensor(Lab5.usPort);                 // usSensor is the instance
 		SampleProvider usDistance = usSensor.getMode("Distance");                    // usDistance provides samples 
@@ -92,31 +100,39 @@ public class Lab5 {
 		UltrasonicPoller usPoller = new UltrasonicPoller(usDistance, usData, usLocalizer); // Instantiate poller
 		usPoller.start();
 		
-		// Ultrasonic localize
-		isUSLocalizing = true;
-		usLocalizer.fallingEdge();
-		isUSLocalizing = false;
+//		// Ultrasonic localize
+//		isUSLocalizing = true;
+//		usLocalizer.fallingEdge();
+//		isUSLocalizing = false;
 
-		// Light localize
-		isLightLocalizing = true;
+//		// Light localize
+//		isLightLocalizing = true;
 		LightLocalizer lightLocalizer  = new LightLocalizer(odometer, nav);    
-		lightLocalizer.start();
-		try {
-			lightLocalizer.join();
-		} catch (InterruptedException e) {
-
-		}
-		
+//		lightLocalizer.start();
+//		try {
+//			lightLocalizer.join();
+//		} catch (InterruptedException e) {
+//
+//		}
+		buttonChoice = 0;
 		odometer.setXYT(SQUARE_SIZE,SQUARE_SIZE , 0);
 
-	//	isGoingToLL = true;
-		Navigation.travelTo(1, LLy);
-		Navigation.travelTo(LLx, LLy);
+		int colorCode = 0;
+		do {
+			float[] rgbValues = new float[3];
+			RingDetection.colorSample.fetchSample(rgbValues, 0);
+			colorCode = RingDetection.colorDetection(rgbValues);
+			Lab5.lcd.drawString("R: " + 100 * rgbValues[0], 0, 1);
+			Lab5.lcd.drawString("G: " + 100 * rgbValues[1], 0, 2);
+			Lab5.lcd.drawString("B: " + 100 * rgbValues[2], 0, 3);
+			Lab5.lcd.drawString("Color: " + colorCode, 0, 4); // display the Color detected
+	} while (buttonChoice != Button.ID_LEFT && buttonChoice != Button.ID_RIGHT); 
 		
-		Search search = new Search(leftMotor, rightMotor, usPoller);
-		search.start();
+	//	Search search = new Search(leftMotor, rightMotor, usPoller);
+	//	search.start();
 		
-		
+		Button.waitForAnyPress();
+
 
 
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);

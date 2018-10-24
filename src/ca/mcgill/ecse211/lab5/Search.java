@@ -1,21 +1,22 @@
 package ca.mcgill.ecse211.lab5;
 
-import java.util.ArrayList;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
 public class Search extends Thread{
 
 	private static double waypoints[][];
+	private static final int RING_INBOUND = 25;
+	private static final int ANGLE_ERROR = 5;
+	private static final int ROTATE_SPEED = 40;
+	private static final int FORWARD_SPEED = 120;
 	
-	private static final int RING_INBOUND = 6;
-
+	
 	private Navigation navigator;
 	private Odometer odo;
 	private UltrasonicPoller usPoller;
   	private EV3LargeRegulatedMotor leftMotor;
   	private EV3LargeRegulatedMotor rightMotor;
 	
-
 	/**
 	 * Constructor
 	 */
@@ -27,119 +28,197 @@ public class Search extends Thread{
 		this.rightMotor = rightMotor;
 	}
 	
-	
-	@SuppressWarnings("unused")
-	public void run() {		
+	public void run() {	
 		
-		waypoints = createWayPoints(Lab5.LLx, Lab5.LLy, Lab5.URx, Lab5.URy);	// create waypoints to travel to
-		
+		//declare variables to be used
 		double[] nextXY = new double[2];
-		double d;
+		int[] result = {255,0};
+		boolean ringAhead = false;
+		int d=255;
+		boolean detectedLastRound = false;
 		
-		//this is for first destination
-		nextXY = waypoints[0];
-		Navigation.travelTo(nextXY[0], nextXY[1]); 
-		Display.displayColorResult(checkForRing());
+		// go to start of region
+		Navigation.travelToNoCorrection(Lab5.LLx, Lab5.LLy);
 		
-		//now move to rest of waypoints
+		// create waypoints to travel to
+		waypoints = createWayPoints(Lab5.LLx, Lab5.LLy, Lab5.URx, Lab5.URy);	
+		
+		
+		//move to rest of waypoints, start at 1 cause 0 is start of SR
 		for (int i = 1; i < waypoints.length; i++) {
+
+			//move to next point, wait till finish
 			nextXY = waypoints[i];
-			Navigation.travelTo(nextXY[0], nextXY[1]); //go to next destination
-			//turn left check for ring
-			Navigation.turnRobot(leftMotor, rightMotor, 45, 60, false, false);
 
-			Display.displayColorResult(checkForRing());
-			//turn right and check for ring
-			Navigation.turnRobot(leftMotor, rightMotor, 90, 60, true, false);
+			
+			Navigation.travelToNoCorrection(nextXY[0], nextXY[1]); 
+			while(leftMotor.isMoving()) {
+				d = (int)(UltrasonicPoller.usData[0]*100.0);
+				if (d < RING_INBOUND) {
+					ringAhead = true;
+					break;
+				}
+				
+			}
+			while(leftMotor.isMoving());
+			
+			//check to see if there is a ring
+			if(!ringAhead) {
+				result = checkForRing();
+			} else {
+				result[1] = RingDetection.detectRing();
+				result[0] = d;
+			}
 
-			Display.displayColorResult(checkForRing());
-			Navigation.turnRobot(leftMotor, rightMotor, 45, 60, false, false);
+			//if its target ring go home
+			if(result[1] == Lab5.TR) {
+				goHome();
+				break;
+			}
+			
+			//if there is ring avoid
+			if(result[1] != 0 && result[0] != 255) {
+				avoidRing();
 
+			}
 		}
 	}
 	
-	/** 
-	 * this method checks for a ring in front of the robot
-	 * assumes in right direction
-	 */
-	//can also incorporate readings from light sensor
-	public int checkForRing() {
+	
+	
+	
+	
+
+
+	//assumes that the robot starts off with sensors on either side of the line 
+	//it is traveling on i.e. its heading is around 90 or 270 degrees
+	//ends robot on horizontal line
+	private void avoidRing() {
+		double theta = -1;
+		boolean east = true;
+		try {
+			theta = Odometer.getOdometer().getXYT()[2];
+		} catch (OdometerExceptions e) {
+			e.printStackTrace();
+		}
+		
+
+		
+	}
+
+
+	private void correctAngle(boolean headingEast,boolean headingWest, boolean headingNorth, boolean headingSouth) {
+		
+		int foundLeft = 0; int foundRight = 0, correctAngle = 0;
+		while(true) {
+			//color sensor and scaling
+			LightLocalizer.myColorSampleLeft.fetchSample(LightLocalizer.colorLeft, 0);
+			LightLocalizer.myColorSampleRight.fetchSample(LightLocalizer.colorRight, 0);
+			LightLocalizer.newColorLeft = LightLocalizer.colorLeft[0];
+			LightLocalizer.newColorRight = LightLocalizer.colorRight[0];
+
+			// If line detected for left sensor (intensity less than 0.4), only count once by keeping track of last value
+			if((LightLocalizer.newColorLeft) < 0.4 && LightLocalizer.oldSampleLeft > 0.4 && foundLeft == 0) {
+				leftMotor.stop(true);
+				foundLeft++;
+			}
+			// If line detected for right sensor (intensity less than 0.3), only count once by keeping track of last value
+			if((LightLocalizer.newColorRight) < 0.4 && LightLocalizer.oldSampleRight > 0.4 && foundRight == 0) {
+				rightMotor.stop(true);
+				foundRight++;
+			}
+			// Store last color samples
+			LightLocalizer.oldSampleLeft = LightLocalizer.newColorLeft;
+			LightLocalizer.oldSampleRight = LightLocalizer.newColorRight;
+			
+			// If line found for both sensors, exit
+			if(foundLeft == 1 && foundRight == 1) {
+				break;
+			}
+		}
+		if(headingNorth) {
+			correctAngle = 0;
+		} else if(headingSouth) {
+			correctAngle = 180;
+		}
+		
+		//correct odometer theta to correct one
+		//if traveling east correct to 90, else west 270
+		if(headingEast)
+			correctAngle = 90;
+		else if(headingWest)
+			correctAngle = 270;
+		try {
+			Odometer.getOdometer().setTheta(correctAngle);
+		} catch (OdometerExceptions e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	private void goHome() {
+		Navigation.travelToNoCorrection(Lab5.URx, Lab5.URy);
+		
+	}
+
+
+	public int[] checkForRing() {
 		int d = (int)(UltrasonicPoller.usData[0]*100.0);
-		if (d < RING_INBOUND) { //ring for sure ahead no need to check take reading
-			return detectRingColor();
-		} else if (d > 13) {
-			if (doubleCheck()) {
-				return detectRingColor();
-			}
+		int[] result = {255, 0};
+		Lab5.lcd.drawString("D: " + d, 0, 1);
+		if (doubleCheck()) {
+			d = (int)(UltrasonicPoller.usData[0]*100.0);
+			result[0] = d;
+			result[1] = RingDetection.detectRing(); 
+			return result;
 		}
-		return 0;
+		return result;
 	}
 	
+	//the robot is before grid intersection
+	//it might be off by an angle
+	//scan + - ANGLE_ERROR degrees to account for this error
 	public boolean doubleCheck() {
-		boolean ring = false;
-		Navigation.moveStraight(leftMotor, rightMotor, 1, 20, true, false);
-		if ((int)(UltrasonicPoller.usData[0]*100.0) < 10) ring = true;
-		Navigation.moveStraight(leftMotor, rightMotor, 1, 20, false, false);
-		return ring;
-	}
-	
-	
-	private int detectRingColor() {
-		Navigation.turnRobot(leftMotor, rightMotor, 20, 50, true, true);
-		ArrayList<Integer> samples = new ArrayList<Integer>();
-		float[] rgb = new float[]{0, 0, 0};
-		int colorCode = 0;
-		while(leftMotor.isMoving()) {
-			try {
-				Thread.sleep(200);
-			} catch (Exception e) {
-			} // Poor man's timed sampling
-//			RingDetection.myColorSample.fetchSample(rgb, 0);
-//			colorCode = RingDetection.detectColor(rgb); //gets sensor data and passes to colordetector class
-			samples.add(colorCode);
+		boolean ringDetected = false;
+		Navigation.moveStraight(leftMotor, rightMotor, 2, FORWARD_SPEED, true, false);
+		if ((int)(UltrasonicPoller.usData[0]*100.0) < 10) {
+			Navigation.moveStraight(leftMotor, rightMotor, 2, FORWARD_SPEED, false, false);
+			return true;
 		}
-		Navigation.turnRobot(leftMotor, rightMotor, 20, 50, false, true);
-		colorCode = findMode(samples);
-		return colorCode;
+		Navigation.turnRobot(leftMotor, rightMotor, ANGLE_ERROR, ROTATE_SPEED, true, false);
+		if ((int)(UltrasonicPoller.usData[0]*100.0) < 10) {
+			Navigation.turnRobot(leftMotor, rightMotor, (-1*ANGLE_ERROR), ROTATE_SPEED, false, false);
+			Navigation.moveStraight(leftMotor, rightMotor, 2, FORWARD_SPEED, false, false);
+			return true;
+		}
+		Navigation.turnRobot(leftMotor, rightMotor, (-1*2*ANGLE_ERROR), ROTATE_SPEED, false, false);
+		if ((int)(UltrasonicPoller.usData[0]*100.0) < 10) ringDetected = true;
+		Navigation.turnRobot(leftMotor, rightMotor, ANGLE_ERROR, ROTATE_SPEED, true, false);
+		if ((int)(UltrasonicPoller.usData[0]*100.0) < 10) ringDetected = true;
+		Navigation.moveStraight(leftMotor, rightMotor, 2, FORWARD_SPEED, false, false);
+		return ringDetected;
 	}
+	
 
 	
-	private int findMode(ArrayList<Integer> samples) {
-		int [] data = new int[4];
-		for(Integer sample : samples)
-			data[sample-1]++;
-		int mode = 0, temp = data[0];
-		for(int i = 1; i < 4; i++){
-			if(data[i] > temp){
-				mode = i;
-				temp = data[i];
-			}
-		}
-		return mode + 1;
-	}
+
 	
 	public static double[][] createWayPoints(int lx, int ly, int ux, int uy) {
-		int numbOfRows = uy - ly + 1, laps = 0;
-		if ((numbOfRows%2)==0) laps = numbOfRows/2;
-		else laps = numbOfRows/2 +1;
-		int numberOfWaypoints = (ux - lx) * laps + 1;
+		int numberOfWaypoints = (ux - lx + 1) * (uy - ly + 1);
 		double[][] waypoints = new double[numberOfWaypoints][2];
-		waypoints[0][0] = (lx * Lab5.SQUARE_SIZE)/Lab5.SQUARE_SIZE;
-		waypoints[0][1] = (ly * Lab5.SQUARE_SIZE + (Lab5.SQUARE_SIZE/2))/Lab5.SQUARE_SIZE;
-		
 		boolean east = true;
-		int j = 1;
-		for(int y = ly; y < uy + 1; y += 2) {
+		int j = 0;
+		for(int y = ly; y < uy + 1; y++) {
 			if (east) {
-				for(int x = lx + 1; x < ux + 1; x++, j++) {
-					waypoints[j][0] = (x * Lab5.SQUARE_SIZE - 10)/Lab5.SQUARE_SIZE;
-					waypoints[j][1] = (y * Lab5.SQUARE_SIZE + (Lab5.SQUARE_SIZE/2))/Lab5.SQUARE_SIZE ;
+				for(int x = lx; x < ux + 1; x++, j++) {
+					waypoints[j][0] = x - 0.60;
+					waypoints[j][1] = y;
 				}
 				east = false;
 			} else {
-				for(int x = ux - 1; x > lx - 1; x--, j++) {
-					waypoints[j][0] = (x * Lab5.SQUARE_SIZE + 10)/Lab5.SQUARE_SIZE;
-					waypoints[j][1] = (y * Lab5.SQUARE_SIZE + (Lab5.SQUARE_SIZE/2))/Lab5.SQUARE_SIZE;
+				for(int x = ux; x > lx - 1; x--, j++) {
+					waypoints[j][0] = x + 0.60;
+					waypoints[j][1] = y;
 				}
 				east = true;
 			}
