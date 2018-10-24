@@ -147,7 +147,7 @@ public class RingDetection  {
 		float[] colorsDistances = new float[5];
 
 		// if this distance is the minimum then, no Color/Object is detected
-		colorsDistances[0] = 0.05f; // to modify
+		colorsDistances[0] = 0.07f; // to modify
 
 		// distance from Blue
 		colorsDistances[1] = (float) distance(blueRGB, rgb);
